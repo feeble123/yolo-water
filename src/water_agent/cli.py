@@ -19,6 +19,7 @@ from water_agent.vision.evaluate import evaluate_model
 from water_agent.vision.folds import prepare_grouped_folds, verify_fold_copies
 from water_agent.vision.label_review import build_label_review_manifest
 from water_agent.vision.oof import aggregate_oof
+from water_agent.vision.retrieval import screen_retrieval_hybrid
 from water_agent.vision.train import run_training
 
 
@@ -169,6 +170,30 @@ def _build_label_review(args: argparse.Namespace) -> int:
                 "candidate_count": report["candidate_count"],
             },
             ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _screen_retrieval_hybrid(args: argparse.Namespace) -> int:
+    report = screen_retrieval_hybrid(
+        weights=args.weights,
+        data_dir=args.data,
+        output_path=args.output,
+        image_size=args.image_size,
+        batch=args.batch,
+        device=args.device,
+    )
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "best_config": report["best_config"],
+                "baseline": report["baseline_metrics"],
+                "best": report["best_metrics"],
+            },
+            ensure_ascii=False,
+            indent=2,
         )
     )
     return 0
@@ -333,6 +358,14 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--output", type=Path, required=True)
     review.add_argument("--max-errors-per-label", type=int, default=4)
     review.set_defaults(handler=_build_label_review)
+    retrieval = commands.add_parser("screen-retrieval-hybrid", help="在隔离验证折筛选YOLO视觉记忆检索融合")
+    retrieval.add_argument("--weights", type=Path, required=True)
+    retrieval.add_argument("--data", type=Path, required=True)
+    retrieval.add_argument("--output", type=Path, required=True)
+    retrieval.add_argument("--image-size", type=int, default=320)
+    retrieval.add_argument("--batch", type=int, default=16)
+    retrieval.add_argument("--device", default="0")
+    retrieval.set_defaults(handler=_screen_retrieval_hybrid)
     predict = commands.add_parser("predict-batch", help="多模型概率集成并生成赛事提交JSON")
     predict.add_argument("--input", type=Path, required=True)
     predict.add_argument("--weights", type=Path, nargs="+", required=True)
