@@ -17,6 +17,7 @@ from water_agent.vision.data_audit import audit_training_data, write_audit
 from water_agent.vision.decision_policy import evaluate_oof_decision_policy
 from water_agent.vision.evaluate import evaluate_model
 from water_agent.vision.folds import prepare_grouped_folds, verify_fold_copies
+from water_agent.vision.label_review import build_label_review_manifest
 from water_agent.vision.oof import aggregate_oof
 from water_agent.vision.train import run_training
 
@@ -150,6 +151,17 @@ def _evaluate_decision_policy(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
+    return 0
+
+
+def _build_label_review(args: argparse.Namespace) -> int:
+    report = build_label_review_manifest(
+        oof_predictions_path=args.predictions,
+        training_images_dir=args.training_images,
+        output_path=args.output,
+        max_errors_per_label=args.max_errors_per_label,
+    )
+    print(json.dumps({"output": str(args.output), "candidate_count": report["candidate_count"]}, ensure_ascii=False))
     return 0
 
 
@@ -306,6 +318,12 @@ def build_parser() -> argparse.ArgumentParser:
     policy.add_argument("--min-class-support", type=int, default=20)
     policy.add_argument("--max-bias", type=float, default=0.75)
     policy.set_defaults(handler=_evaluate_decision_policy)
+    review = commands.add_parser("build-label-review", help="从训练集OOF错例生成只读人工复核清单")
+    review.add_argument("--predictions", type=Path, required=True)
+    review.add_argument("--training-images", type=Path, required=True)
+    review.add_argument("--output", type=Path, required=True)
+    review.add_argument("--max-errors-per-label", type=int, default=4)
+    review.set_defaults(handler=_build_label_review)
     predict = commands.add_parser("predict-batch", help="多模型概率集成并生成赛事提交JSON")
     predict.add_argument("--input", type=Path, required=True)
     predict.add_argument("--weights", type=Path, nargs="+", required=True)
