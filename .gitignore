@@ -1,0 +1,42 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+artifacts/models/
+artifacts/logs/
+artifacts/uploads/
+artifacts/ultralytics_config/
+artifacts/matplotlib_config/
+artifacts/training/
+artifacts/
+result/*.json
+result/batch_runtime/
+!result/.gitkeep
+
+# Competition data and generated runtime artifacts: never publish.
+初赛训练集/
+初赛测试集/
+训练集/
+train/
+test/
+data/
+runtime/
+train.json
+
+# Credentials and local configuration.
+api key.txt
+api_key.txt
+*.key
+*.pem
+.env.*
+!.env.example
+
+# Local submissions and archives are rebuilt locally, not stored in source control.
+*.tar.gz
+*.zip
+*.pt
+*.onnx
+*.stderr.log
+*.stdout.log

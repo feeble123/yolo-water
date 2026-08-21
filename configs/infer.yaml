@@ -1,0 +1,8 @@
+weights:
+  - models/fold0.pt
+  - models/fold1.pt
+  - models/fold2.pt
+  - models/fold3.pt
+image_size: 320
+review_threshold: 0.65
+output: result/result.json

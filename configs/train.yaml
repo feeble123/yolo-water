@@ -1,0 +1,11 @@
+seed: 20260820
+model: yolo26s-cls.pt
+smoke_model: yolo26n-cls.pt
+image_size: 640
+folds: 4
+epochs: 80
+patience: 15
+batch: 8
+primary_metric: macro_f1
+preserve_aspect_ratio: true
+

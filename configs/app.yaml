@@ -1,0 +1,6 @@
+app_name: 水域综合异常识别智能体
+review_threshold: 0.65
+max_upload_bytes: 20971520
+max_image_pixels: 40000000
+allowed_extensions: [.jpg, .jpeg, .png, .webp]
+
