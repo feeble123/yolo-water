@@ -1,5 +1,21 @@
 # Progress Log
 
+## Session: 2026-08-21
+
+### Phase 10：仅官方训练集的准确率优化
+
+- 用户已授权进入模型优化实施，并明确禁止引入外部数据集；训练、验证仅使用赛事方提供的官方训练集，初赛测试集继续完全隔离。
+- 已在GitHub备份基线`e8229dc`基础上创建实验分支`experiment/fullframe-highres`，后续所有训练产物使用独立实验名称，不覆盖当前四折线上模型或提交结果。
+- 本轮实验顺序固定为：P0变换/资源复核 → P1高分辨率单变量 → P2全图letterbox → P3长尾损失 → P4四折OOF与集成。任何候选必须先经分组OOF证明改善。
+- P0已完成：记录冠军OOF指标、fold 0可复现超参数、实际Ultralytics分类变换和GPU余量。发现安装版本中`ClassificationDataset`位于`ultralytics.data.dataset`，旧模块路径导入失败，已切换为源码定位方式，不影响现有模型。
+- P1第一次训练启动因历史`artifacts/training`目录ACL拒绝创建新子目录而停止，尚未开始epoch、未产生半成品模型。已新建`experiments/training`、`experiments/metrics`和专用运行缓存目录；将以只读原fold数据重新启动。
+- 重新启动的前台P1训练被运行环境约30秒时限切断，仅写入epoch 1（Top-1 0.9021）的临时结果，权重未完成保存，不能用于任何结论。后续采用隐藏后台进程和独立日志完成同一固定参数实验。
+- 为保持官方训练衍生折只读，已将fold 0的858张训练图与286张验证图复制到`experiments/data/fold_0`；之后的Ultralytics JPEG修复、缓存和训练仅作用于此实验副本。`experiments/`已加入Git忽略规则，不会进入云端源码备份。
+- 后台训练保存epoch checkpoint时被Polars CPU特征误判（`unknown feature flag: sse3`）阻断。已在隔离环境验证`POLARS_SKIP_CPU_CHECK=1`可正常导入同一Polars版本；训练入口将在Windows上设置该进程级兼容变量，不改变模型计算或数据。
+- P2代码已完成：新增`SquareLetterbox`与保守水平翻转变换，训练CLI新增`--image-transform letterbox`。该实现仅作用于未来候选实验，不影响正在运行的P1默认裁剪训练；3项新变换单元测试和既有长尾测试共6项通过。
+- P1 v2已成功越过此前的checkpoint保存故障并持续训练，当前已写入epoch 1–3和`best.pt`/`last.pt`；暂不按中间Top-1选择模型，须等待15 epoch结束并用项目评估器得到逐类指标。
+- P1完成并淘汰：512默认裁剪候选的fold 0 Accuracy 0.98951、Balanced Accuracy 0.83268、Macro-F1 0.74935，低于320冠军折基线的0.99301、0.83333、0.83268。虽然乱建单验证图被判对，但正常仍为0，且增加了有漂浮物→乱建误报；不进行四折复训。
+
 ## Session: 2026-08-20
 
 ### Phase 5：真实智能体启动修复与提交包重建

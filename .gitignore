@@ -11,6 +11,7 @@ artifacts/ultralytics_config/
 artifacts/matplotlib_config/
 artifacts/training/
 artifacts/
+experiments/
 result/*.json
 result/batch_runtime/
 !result/.gitkeep

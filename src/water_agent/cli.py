@@ -93,6 +93,7 @@ def _train(args: argparse.Namespace) -> int:
         class_weight_power=args.class_weight_power,
         class_weight_cap=args.class_weight_cap,
         label_smoothing=args.label_smoothing,
+        image_transform=args.image_transform,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
@@ -240,6 +241,12 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--class-weight-power", type=float, default=0.0)
     train.add_argument("--class-weight-cap", type=float, default=8.0)
     train.add_argument("--label-smoothing", type=float, default=0.0)
+    train.add_argument(
+        "--image-transform",
+        choices=("default", "letterbox"),
+        default="default",
+        help="default使用Ultralytics裁剪；letterbox保留完整画幅",
+    )
     train.set_defaults(handler=_train)
     evaluate = commands.add_parser("evaluate", help="评估分类权重并输出长尾指标")
     evaluate.add_argument("--weights", type=Path, required=True)

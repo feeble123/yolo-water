@@ -20,6 +20,7 @@ def run_training(
     class_weight_power: float = 0.0,
     class_weight_cap: float = 8.0,
     label_smoothing: float = 0.0,
+    image_transform: str = "default",
 ) -> dict[str, Any]:
     if not (data_dir / "train").is_dir() or not (data_dir / "val").is_dir():
         raise FileNotFoundError("data目录必须包含train与val子目录")
@@ -31,6 +32,8 @@ def run_training(
         raise ValueError("class_weight_cap不能小于1")
     if not 0.0 <= label_smoothing < 1.0:
         raise ValueError("label_smoothing必须在[0, 1)之间")
+    if image_transform not in {"default", "letterbox"}:
+        raise ValueError("image_transform仅支持default或letterbox")
 
     config_dir = output_dir.parent / "ultralytics_config"
     matplotlib_dir = output_dir.parent / "matplotlib_config"
@@ -38,6 +41,11 @@ def run_training(
     matplotlib_dir.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("YOLO_CONFIG_DIR", str(config_dir.resolve()))
     os.environ.setdefault("MPLCONFIGDIR", str(matplotlib_dir.resolve()))
+    # Some Windows environments report an incomplete CPU feature set to Polars although
+    # its installed binary runs correctly. Ultralytics imports Polars only to serialize
+    # results.csv into the checkpoint at the end of each epoch.
+    if os.name == "nt":
+        os.environ.setdefault("POLARS_SKIP_CPU_CHECK", "1")
     if os.name == "nt" and "WINDIR" not in os.environ:
         os.environ["WINDIR"] = os.environ.get("SystemRoot", r"C:\Windows")
 
@@ -52,6 +60,7 @@ def run_training(
             power=class_weight_power,
             cap=class_weight_cap,
             label_smoothing=label_smoothing,
+            image_transform=image_transform,
         )
     metrics = trainer.train(
         trainer=trainer_class,
@@ -83,5 +92,6 @@ def run_training(
         "class_weight_power": class_weight_power,
         "class_weight_cap": class_weight_cap,
         "label_smoothing": label_smoothing,
+        "image_transform": image_transform,
         "note": "power为0时使用标准交叉熵；大于0时使用有上限的逆频率幂次类别权重。",
     }

@@ -9,6 +9,8 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from water_agent.vision.full_frame import build_full_frame_transform
+
 
 def compute_class_weights(
     class_counts: Sequence[int], *, power: float = 0.5, cap: float = 8.0
@@ -46,12 +48,28 @@ class WeightedClassificationLoss:
 
 
 def make_weighted_classification_trainer(
-    *, power: float, cap: float, label_smoothing: float
+    *, power: float, cap: float, label_smoothing: float, image_transform: str = "default"
 ) -> type:
+    if image_transform not in {"default", "letterbox"}:
+        raise ValueError("image_transform仅支持default或letterbox")
+    from ultralytics.data import ClassificationDataset
     from ultralytics.models.yolo.classify import ClassificationTrainer
     from ultralytics.utils.torch_utils import unwrap_model
 
     class WeightedClassificationTrainer(ClassificationTrainer):
+        def build_dataset(self, img_path: str, mode: str = "train", batch: Any = None):
+            if image_transform == "default":
+                return super().build_dataset(img_path, mode, batch)
+            dataset = ClassificationDataset(
+                root=img_path, args=self.args, augment=mode == "train", prefix=mode
+            )
+            dataset.torch_transforms = build_full_frame_transform(
+                size=int(self.args.imgsz),
+                train=mode == "train",
+                horizontal_flip=float(self.args.fliplr),
+            )
+            return dataset
+
         def set_class_weights(self) -> None:
             counts_by_index = Counter(int(sample[1]) for sample in self.train_loader.dataset.samples)
             class_count = int(self.data["nc"])
@@ -66,6 +84,7 @@ def make_weighted_classification_trainer(
                 "power": power,
                 "cap": cap,
                 "label_smoothing": label_smoothing,
+                "image_transform": image_transform,
                 "classes": [
                     {
                         "index": index,
