@@ -161,7 +161,16 @@ def _build_label_review(args: argparse.Namespace) -> int:
         output_path=args.output,
         max_errors_per_label=args.max_errors_per_label,
     )
-    print(json.dumps({"output": str(args.output), "candidate_count": report["candidate_count"]}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "spreadsheet": report["spreadsheet_path"],
+                "candidate_count": report["candidate_count"],
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

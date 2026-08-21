@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -73,4 +74,26 @@ def build_label_review_manifest(
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    spreadsheet_path = output_path.with_suffix(".csv")
+    fields = [
+        "file",
+        "training_image_path",
+        "official_label",
+        "model_prediction",
+        "model_confidence",
+        "official_label_probability",
+        "fold",
+        "top2",
+        "review_status",
+        "reviewer_label",
+        "review_note",
+    ]
+    with spreadsheet_path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        for candidate in candidates:
+            row = dict(candidate)
+            row["top2"] = json.dumps(row["top2"], ensure_ascii=False)
+            writer.writerow(row)
+    report["spreadsheet_path"] = str(spreadsheet_path.resolve())
     return report

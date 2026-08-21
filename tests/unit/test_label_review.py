@@ -64,3 +64,4 @@ def test_review_manifest_keeps_all_normal_errors_and_caps_other_labels(tmp_path)
         "normal1.jpg",
         "normal2.jpg",
     ]
+    assert (tmp_path / "review.csv").is_file()
