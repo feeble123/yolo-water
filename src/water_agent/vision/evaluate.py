@@ -226,11 +226,14 @@ def evaluate_model(
     image_size: int,
     batch: int,
     device: str,
+    image_transform: str = "default",
 ) -> dict[str, Any]:
     if not weights.is_file():
         raise FileNotFoundError(f"模型权重不存在: {weights}")
     if image_size <= 0 or batch <= 0:
         raise ValueError("image_size与batch必须为正数")
+    if image_transform not in {"default", "letterbox"}:
+        raise ValueError("image_transform仅支持default或letterbox")
 
     labels = [label.value for label in WaterLabel]
     image_paths = _collect_validation_images(data_dir, labels)
@@ -240,6 +243,12 @@ def evaluate_model(
     from ultralytics import YOLO
 
     model = YOLO(str(weights.resolve()))
+    if image_transform == "letterbox":
+        from water_agent.vision.full_frame import build_full_frame_transform
+
+        model.model.transforms = build_full_frame_transform(
+            size=image_size, train=False, horizontal_flip=0.0
+        )
     started = time.perf_counter()
     results = model.predict(
         source=[str(path.resolve()) for path in image_paths],
@@ -292,6 +301,7 @@ def evaluate_model(
         "image_size": image_size,
         "batch": batch,
         "device": device,
+        "image_transform": image_transform,
         "elapsed_ms": elapsed_ms,
         "mean_latency_ms": elapsed_ms / len(y_true),
         "metrics": metrics,

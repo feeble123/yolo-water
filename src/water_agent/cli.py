@@ -113,6 +113,7 @@ def _evaluate(args: argparse.Namespace) -> int:
         image_size=args.image_size,
         batch=args.batch,
         device=args.device,
+        image_transform=args.image_transform,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
@@ -255,6 +256,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--image-size", type=int, default=640)
     evaluate.add_argument("--batch", type=int, default=8)
     evaluate.add_argument("--device", default="0")
+    evaluate.add_argument("--image-transform", choices=("default", "letterbox"), default="default")
     evaluate.set_defaults(handler=_evaluate)
     oof = commands.add_parser("aggregate-oof", help="汇总多折OOF指标并拟合温度校准")
     oof.add_argument("--evaluations", type=Path, nargs="+", required=True)
