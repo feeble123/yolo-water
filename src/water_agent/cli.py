@@ -14,6 +14,7 @@ from water_agent.tools.release import build_release
 from water_agent.tools.submission import validate_submission
 from water_agent.vision.batch_predict import predict_batch
 from water_agent.vision.data_audit import audit_training_data, write_audit
+from water_agent.vision.decision_policy import evaluate_oof_decision_policy
 from water_agent.vision.evaluate import evaluate_model
 from water_agent.vision.folds import prepare_grouped_folds, verify_fold_copies
 from water_agent.vision.oof import aggregate_oof
@@ -127,6 +128,28 @@ def _evaluate(args: argparse.Namespace) -> int:
 def _aggregate_oof(args: argparse.Namespace) -> int:
     result = aggregate_oof(args.evaluations, args.output)
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _evaluate_decision_policy(args: argparse.Namespace) -> int:
+    result = evaluate_oof_decision_policy(
+        predictions_path=args.predictions,
+        output_path=args.output,
+        min_class_support=args.min_class_support,
+        max_bias=args.max_bias,
+    )
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "raw_metrics": result["raw_metrics"],
+                "nested_biased_metrics": result["nested_biased_metrics"],
+                "constraints": result["policy_constraints"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -277,6 +300,12 @@ def build_parser() -> argparse.ArgumentParser:
     oof.add_argument("--evaluations", type=Path, nargs="+", required=True)
     oof.add_argument("--output", type=Path, required=True)
     oof.set_defaults(handler=_aggregate_oof)
+    policy = commands.add_parser("evaluate-decision-policy", help="以嵌套OOF检验保守类别偏置")
+    policy.add_argument("--predictions", type=Path, required=True)
+    policy.add_argument("--output", type=Path, required=True)
+    policy.add_argument("--min-class-support", type=int, default=20)
+    policy.add_argument("--max-bias", type=float, default=0.75)
+    policy.set_defaults(handler=_evaluate_decision_policy)
     predict = commands.add_parser("predict-batch", help="多模型概率集成并生成赛事提交JSON")
     predict.add_argument("--input", type=Path, required=True)
     predict.add_argument("--weights", type=Path, nargs="+", required=True)
