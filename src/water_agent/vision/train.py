@@ -21,6 +21,8 @@ def run_training(
     class_weight_cap: float = 8.0,
     label_smoothing: float = 0.0,
     image_transform: str = "default",
+    loss_strategy: str = "auto",
+    logit_adjustment_tau: float = 0.0,
 ) -> dict[str, Any]:
     if not (data_dir / "train").is_dir() or not (data_dir / "val").is_dir():
         raise FileNotFoundError("data目录必须包含train与val子目录")
@@ -34,6 +36,10 @@ def run_training(
         raise ValueError("label_smoothing必须在[0, 1)之间")
     if image_transform not in {"default", "letterbox"}:
         raise ValueError("image_transform仅支持default或letterbox")
+    if loss_strategy not in {"auto", "weighted_ce", "logit_adjusted"}:
+        raise ValueError("loss_strategy仅支持auto、weighted_ce或logit_adjusted")
+    if logit_adjustment_tau < 0.0:
+        raise ValueError("logit adjustment的tau不能小于0")
 
     config_dir = output_dir.parent / "ultralytics_config"
     matplotlib_dir = output_dir.parent / "matplotlib_config"
@@ -53,12 +59,17 @@ def run_training(
 
     trainer = YOLO(model)
     trainer_class = None
-    if class_weight_power > 0.0:
-        from water_agent.vision.long_tail import make_weighted_classification_trainer
+    resolved_strategy = loss_strategy
+    if resolved_strategy == "auto":
+        resolved_strategy = "weighted_ce" if class_weight_power > 0.0 else "standard_ce"
+    if resolved_strategy != "standard_ce":
+        from water_agent.vision.long_tail import make_long_tail_classification_trainer
 
-        trainer_class = make_weighted_classification_trainer(
+        trainer_class = make_long_tail_classification_trainer(
+            strategy=resolved_strategy,
             power=class_weight_power,
             cap=class_weight_cap,
+            logit_adjustment_tau=logit_adjustment_tau,
             label_smoothing=label_smoothing,
             image_transform=image_transform,
         )
@@ -93,5 +104,7 @@ def run_training(
         "class_weight_cap": class_weight_cap,
         "label_smoothing": label_smoothing,
         "image_transform": image_transform,
-        "note": "power为0时使用标准交叉熵；大于0时使用有上限的逆频率幂次类别权重。",
+        "loss_strategy": resolved_strategy,
+        "logit_adjustment_tau": logit_adjustment_tau,
+        "note": "standard_ce为普通交叉熵；weighted_ce为有上限的逆频率幂次加权；logit_adjusted为训练期类别先验Logit调整。",
     }
