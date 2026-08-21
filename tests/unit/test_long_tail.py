@@ -4,9 +4,11 @@ import pytest
 import torch
 
 from water_agent.vision.long_tail import (
+    LDAMDRWClassificationLoss,
     LogitAdjustedClassificationLoss,
     WeightedClassificationLoss,
     compute_class_weights,
+    compute_ldam_margins,
     compute_logit_adjustments,
 )
 
@@ -54,3 +56,30 @@ def test_logit_adjusted_loss_matches_adjusted_cross_entropy() -> None:
 
     assert loss.item() == pytest.approx(expected.item())
     assert items["loss"].item() == pytest.approx(expected.item())
+
+
+def test_ldam_margin_is_larger_for_the_rare_class() -> None:
+    margins = compute_ldam_margins([81, 1], max_margin=0.5)
+
+    assert margins == pytest.approx([0.5 / 3.0, 0.5])
+
+
+def test_ldam_uses_weights_only_after_deferred_reweighting() -> None:
+    logits = torch.tensor([[2.0, 0.1], [0.2, 1.3]])
+    batch = {"cls": torch.tensor([0, 1])}
+    criterion = LDAMDRWClassificationLoss([0.1, 0.4], [1.0, 3.0], scale=1.0, drw_start_epoch=2)
+
+    before_loss, _ = criterion(logits, batch)
+    expected_before = torch.nn.functional.cross_entropy(
+        logits + torch.tensor([[-0.1, 0.0], [0.0, -0.4]]), batch["cls"]
+    )
+    criterion.current_epoch = 2
+    after_loss, _ = criterion(logits, batch)
+    expected_after = torch.nn.functional.cross_entropy(
+        logits + torch.tensor([[-0.1, 0.0], [0.0, -0.4]]),
+        batch["cls"],
+        weight=torch.tensor([1.0, 3.0]),
+    )
+
+    assert before_loss.item() == pytest.approx(expected_before.item())
+    assert after_loss.item() == pytest.approx(expected_after.item())

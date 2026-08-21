@@ -96,6 +96,9 @@ def _train(args: argparse.Namespace) -> int:
         image_transform=args.image_transform,
         loss_strategy=args.loss_strategy,
         logit_adjustment_tau=args.logit_adjustment_tau,
+        ldam_max_margin=args.ldam_max_margin,
+        ldam_scale=args.ldam_scale,
+        drw_start_epoch=args.drw_start_epoch,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
@@ -246,11 +249,14 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--label-smoothing", type=float, default=0.0)
     train.add_argument(
         "--loss-strategy",
-        choices=("auto", "weighted_ce", "logit_adjusted"),
+        choices=("auto", "weighted_ce", "logit_adjusted", "ldam_drw"),
         default="auto",
         help="auto沿用既有行为；logit_adjusted只在训练期按类别先验调整logit",
     )
     train.add_argument("--logit-adjustment-tau", type=float, default=0.0)
+    train.add_argument("--ldam-max-margin", type=float, default=0.5)
+    train.add_argument("--ldam-scale", type=float, default=30.0)
+    train.add_argument("--drw-start-epoch", type=int, default=10)
     train.add_argument(
         "--image-transform",
         choices=("default", "letterbox"),

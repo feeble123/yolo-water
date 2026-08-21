@@ -23,6 +23,9 @@ def run_training(
     image_transform: str = "default",
     loss_strategy: str = "auto",
     logit_adjustment_tau: float = 0.0,
+    ldam_max_margin: float = 0.5,
+    ldam_scale: float = 30.0,
+    drw_start_epoch: int = 10,
 ) -> dict[str, Any]:
     if not (data_dir / "train").is_dir() or not (data_dir / "val").is_dir():
         raise FileNotFoundError("data目录必须包含train与val子目录")
@@ -36,10 +39,12 @@ def run_training(
         raise ValueError("label_smoothing必须在[0, 1)之间")
     if image_transform not in {"default", "letterbox"}:
         raise ValueError("image_transform仅支持default或letterbox")
-    if loss_strategy not in {"auto", "weighted_ce", "logit_adjusted"}:
-        raise ValueError("loss_strategy仅支持auto、weighted_ce或logit_adjusted")
+    if loss_strategy not in {"auto", "weighted_ce", "logit_adjusted", "ldam_drw"}:
+        raise ValueError("loss_strategy仅支持auto、weighted_ce、logit_adjusted或ldam_drw")
     if logit_adjustment_tau < 0.0:
         raise ValueError("logit adjustment的tau不能小于0")
+    if ldam_max_margin <= 0.0 or ldam_scale <= 0.0 or drw_start_epoch < 0:
+        raise ValueError("LDAM-DRW参数不合法")
 
     config_dir = output_dir.parent / "ultralytics_config"
     matplotlib_dir = output_dir.parent / "matplotlib_config"
@@ -70,6 +75,9 @@ def run_training(
             power=class_weight_power,
             cap=class_weight_cap,
             logit_adjustment_tau=logit_adjustment_tau,
+            ldam_max_margin=ldam_max_margin,
+            ldam_scale=ldam_scale,
+            drw_start_epoch=drw_start_epoch,
             label_smoothing=label_smoothing,
             image_transform=image_transform,
         )
@@ -106,5 +114,8 @@ def run_training(
         "image_transform": image_transform,
         "loss_strategy": resolved_strategy,
         "logit_adjustment_tau": logit_adjustment_tau,
-        "note": "standard_ce为普通交叉熵；weighted_ce为有上限的逆频率幂次加权；logit_adjusted为训练期类别先验Logit调整。",
+        "ldam_max_margin": ldam_max_margin,
+        "ldam_scale": ldam_scale,
+        "drw_start_epoch": drw_start_epoch,
+        "note": "standard_ce为普通交叉熵；weighted_ce为有上限的逆频率幂次加权；logit_adjusted为训练期类别先验Logit调整；ldam_drw为大间隔长尾损失加延迟重加权。",
     }
